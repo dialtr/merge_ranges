@@ -1,40 +1,44 @@
 #include <cassert>
+#include <compare>
 #include <cstddef>
 #include <iostream>
+#include <set>
 
 class Range {
  public:
-  size_t offset = 0;
-	size_t length = 0;
+  size_t start = 0;
+  size_t end = 0;
+  auto operator <=>(const Range&) const = default;
 };
 
-bool operator<(const Range& lhs, const Range& rhs) {
-  if (lhs.offset < rhs.offset) {
-		return true;
-	} else if (lhs.offset > rhs.offset) {
-		return false;
-	} else if (lhs.length > rhs.length) {
-		return true;
-	} else if (lhs.length < rhs.length) {
-		return false;
-	}
-	return false;
-}
-
 void RangeTest() {
-	Range a{{0}, {10}};
-	Range b{{0}, {20}};
-	Range c{{10}, {10}};
-	assert(b < a);
-	assert(b < c);
-	assert(a < c);
+  Range a{{0}, {10}};
+  Range b{{0}, {20}};
+  Range c{{20}, {30}};
+  assert(a < b);
+  assert(b < c);
+  assert(a < c);
 }
 
 class RangeSet {
  public:
+  enum { kOk = 0, kCollision = 1 };
+
+  struct Result {
+    int status = kOk;
+    Range range{{0}, {0}};
+  };
+
+	Result Add(const Range& range) {
+		Result r;
+		return r;
+	}
+
+ private:
+  std::set<Range> ranges_;
 };
 
 int main(int argc, char* argv[]) {
   RangeTest();
-	return 0;
+  return 0;
 }
