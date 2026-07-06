@@ -85,9 +85,10 @@ int main(int argc, char* argv[]) {
   Range b{{10}, {20}};
   Range c{{30}, {40}};
   Range d{{40}, {50}};
-  Range e{{60}, {70}};
+	Range e{{45}, {65}}; // conflict
+  Range f{{60}, {70}};
 
-  std::set<Range> ranges{a, b, c, d, e};
+  std::set<Range> ranges{a, b, c, d, e, f};
 
   auto result = Merge(ranges);
 
