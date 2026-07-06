@@ -34,15 +34,21 @@ void RangeTest() {
 // Accept a set of ranges as input.
 // Return a set of merged ranges as output, along with a bool indicating
 // whether any collisions occurred in the ranges during coalescing.
-[[nodiscard]] std::tuple<std::set<Range>, bool> Merge(
-    std::set<Range> input_set) {
+
+struct MergeResult {
+  std::set<Range> ranges;
+  std::set<Range> gaps;
+  int conflicts = 0;
+};
+
+[[nodiscard]] MergeResult Merge(std::set<Range> input_set) {
+  // The results of the operation.
+  MergeResult result;
+
+  // Handle degenerate case: empty input set.
   if (input_set.size() == 0) {
-    // Degenerate case.
-    return std::make_tuple(std::set<Range>(), false);
+    return result;
   }
-  // Initialize output set
-  std::set<Range> output_set;
-  bool has_conflicts = false;
 
   // Initialize current range to the first item's range.
   auto it = input_set.begin();
@@ -55,7 +61,7 @@ void RangeTest() {
     if (it->start < end) {
       // The range under consideration conflicts with current range, so we
       // merge it into the current range and set the conflict flag.
-      has_conflicts = true;
+      ++result.conflicts;
       end = it->end;
     } else if (it->start == end) {
       // The range under consideration perfectly extends the current range,
@@ -65,17 +71,19 @@ void RangeTest() {
       // The range under consideration is disjoint from the current range,
       // so we add the current range to the output set, and then reinitialize
       // the current range to the range of this item.
-      output_set.insert(Range{{start}, {end}});
+      result.ranges.insert(Range{{start}, {end}});
+      // We also add a range to the set of gap ranges.
+      result.gaps.insert(Range{{end}, {it->start}});
       start = it->start;
       end = it->end;
     }
   }
 
   // Finally, we add the current range left over upon completing the loop.
-  output_set.insert(Range{{start}, {end}});
+  result.ranges.insert(Range{{start}, {end}});
 
   // Return the merged set.
-  return std::make_tuple(std::move(output_set), has_conflicts);
+  return result;
 }
 
 int main(int argc, char* argv[]) {
@@ -85,21 +93,26 @@ int main(int argc, char* argv[]) {
   Range b{{10}, {20}};
   Range c{{30}, {40}};
   Range d{{40}, {50}};
-	Range e{{45}, {65}}; // conflict
+  Range e{{45}, {65}};  // conflict
   Range f{{60}, {70}};
 
   std::set<Range> ranges{a, b, c, d, e, f};
 
   auto result = Merge(ranges);
 
-  if (std::get<1>(result)) {
+  if (result.conflicts > 0) {
     cout << "There were merge conflicts." << endl;
   } else {
     cout << "No merge conflicts detected." << endl;
   }
 
-  for (auto e : std::get<0>(result)) {
-    cout << e << endl;
+  cout << "Merged Ranges:" << endl;
+  for (auto e : result.ranges) {
+    cout << "  " << e << endl;
+  }
+  cout << "Gaps: " << endl;
+  for (auto e : result.gaps) {
+    cout << "  " << e << endl;
   }
 
   return 0;
