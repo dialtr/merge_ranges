@@ -9,6 +9,19 @@
 using std::cout;
 using std::endl;
 
+// This program demonstrates an algorithm for merging a set of numeric ranges
+// that may contain overlaps into a minimal set that covers the same range
+// with no overlaps. Numeric ranges are represented by a Range object
+// consisting of a [start, end) point.
+//
+// The Merge() function returns a MergeResult object that contains the
+// following members:
+//
+// 1. ranges   - The minimal set of ranges covering the input.
+// 2. gaps     - A set of ranges that span gaps between the above.
+// 3. overlaps - The count of overlapping ranges / conflicts detected.
+
+// Range: a range on a number line covering [start, end).
 class Range {
  public:
   size_t start = 0;
@@ -16,94 +29,84 @@ class Range {
   auto operator<=>(const Range&) const = default;
 };
 
+// Canonical stream inseration operator for a Range.
 std::ostream& operator<<(std::ostream& os, const Range& r) {
   os << "Range [" << r.start << ", " << r.end << ")";
   return os;
 }
 
-void RangeTest() {
-  Range a{{0}, {10}};
-  Range b{{0}, {20}};
-  Range c{{20}, {30}};
-  assert(a < b);
-  assert(b < c);
-  assert(a < c);
-  cout << a << endl << b << endl << c << endl;
-}
-
-// Accept a set of ranges as input.
-// Return a set of merged ranges as output, along with a bool indicating
-// whether any collisions occurred in the ranges during coalescing.
-
+// MergeResult: described in more detail above.
 struct MergeResult {
   std::set<Range> ranges;
   std::set<Range> gaps;
-  int conflicts = 0;
+  int overlaps = 0;
 };
 
-[[nodiscard]] MergeResult Merge(std::set<Range> input_set) {
-  // The results of the operation.
+// MergeRanges() merges a set of input ranges, providing a result that
+// includes the minimal set output ranges, the gaps between those ranges,
+// and the number of overlaps that were detected in the input set during
+// processing.
+[[nodiscard]] MergeResult MergeRanges(const std::set<Range> input_set) {
   MergeResult result;
 
-  // Handle degenerate case: empty input set.
+  // Handle the degenerate case: an empty input set.
   if (input_set.size() == 0) {
     return result;
   }
 
-  // Initialize current range to the first item's range.
+  // Initialize values to track the current range with the first item.
   auto it = input_set.begin();
-  size_t start = it->start;
-  size_t end = it->end;
+  Range current{{it->start}, {it->end}};
   ++it;
 
-  // For all remaining ranges in the input set.
+  // For all remaining ranges in the input set..
   for (; it != input_set.end(); ++it) {
-    if (it->start < end) {
-      // The range under consideration conflicts with current range, so we
-      // merge it into the current range and set the conflict flag.
-      ++result.conflicts;
-      end = it->end;
-    } else if (it->start == end) {
-      // The range under consideration perfectly extends the current range,
-      // so we me merge it without setting the conflict flag.
-      end = it->end;
-    } else if (it->start > end) {
-      // The range under consideration is disjoint from the current range,
-      // so we add the current range to the output set, and then reinitialize
-      // the current range to the range of this item.
-      result.ranges.insert(Range{{start}, {end}});
-      // We also add a range to the set of gap ranges.
-      result.gaps.insert(Range{{end}, {it->start}});
-      start = it->start;
-      end = it->end;
+    if (it->start < current.end) {
+      // The item under consideration conflicts with current range, so we
+      // merge it into the current range and increment the overlap counter.
+      ++result.overlaps;
+      current.end = it->end;
+    } else if (it->start == current.end) {
+      // The item under consideration perfectly extends the current range,
+      // so we me merge it without incrementing the overlap counter.
+      current.end = it->end;
+    } else if (it->start > current.end) {
+      // The item under consideration is disjoint from the current range;
+      // add the current range to the output set.
+      result.ranges.insert(current);
+      // Add the gap beteeen the end of that range and the start of the
+      // item under consideration.
+      result.gaps.insert(Range{{current.end}, {it->start}});
+      // Finally, update the current range to be the same as this item.
+      current.start = it->start;
+      current.end = it->end;
     }
   }
 
   // Finally, we add the current range left over upon completing the loop.
-  result.ranges.insert(Range{{start}, {end}});
+  result.ranges.insert(current);
 
   // Return the merged set.
   return result;
 }
 
 int main(int argc, char* argv[]) {
-  // RangeTest();
-
+  // Define some ranges.
   Range a{{0}, {10}};
   Range b{{10}, {20}};
   Range c{{30}, {40}};
   Range d{{40}, {50}};
-  Range e{{45}, {65}};  // conflict
+  Range e{{45}, {65}};  // overlaps previous and next
   Range f{{60}, {70}};
 
   std::set<Range> ranges{a, b, c, d, e, f};
 
-  auto result = Merge(ranges);
+  auto result = MergeRanges(ranges);
 
-  if (result.conflicts > 0) {
-    cout << "There were merge conflicts." << endl;
+  if (result.overlaps > 0) {
+    cout << "There were merge overlaps." << endl;
   } else {
-    cout << "No merge conflicts detected." << endl;
+    cout << "No merge overlaps detected." << endl;
   }
 
   cout << "Merged Ranges:" << endl;
